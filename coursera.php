@@ -5,49 +5,15 @@ set_time_limit(0);
 require('./LibCurl.php');
 require('./LibStorage.php');
 
-
-function test(){
-
-	set_time_limit(0);
-
-	$cookie = '/tmp/cookie.txt';
-
-	$urlForm = 'https://www.coursera.org/?authMode=login';
-	$formCurl = new LibCurl(true, $cookie);
-	$content = $formCurl->get( $urlForm);
-
-	//登录
-	$matchStr = '#<form action="([^"]*)" method="post"#';
-	preg_match($matchStr, $content,$actionM);
-	echo $action = trim($actionM[1]);
-	$loginPre = 'https://www.coursera.org'.$action;
-	$param = 'email=wanchun0222@126.com&password=014622';
-	$loginCurl = new LibCurl(true, $cookie);
-	$loginCurl->post( $loginPre , $param);
-
-	//获取列表数据
-	$curPage = 'https://class.coursera.org/pkujava-001/lecture';
-	$listCurl = new LibCurl(true, $cookie);
-	$html = $listCurl->get( $curPage);
-
-	$matchStr = '#data\-lecture\-id="([^"]*)"\s*data\-link\-type="lecture:download\.mp4"\s*data\-placement\="top"\s*rel="tooltip"\s*title="Video \(MP4\)" >\s*<i class="icon\-download\-alt resource" ></i>\s*<div class="hidden">([^<]*)</div>#';
-	preg_match_all($matchStr, $html,$lectureM);
-	
-	echo '<pre>';
-	print_r($lectureM);
-	echo '</pre>';
-
-}
-//test();
-//exit;
 class Coursera{
 
 	const URL_PREFIX = 'https://www.coursera.org';
+
 	const LIST_PREFIX = 'https://class.coursera.org';
 
-	private static $userName = 'wanchun0222@126.com';
+	private static $userName = 'your coursera user name(email)';
 	
-	private static $password = '014622';
+	private static $password = 'your coursera password';
 
 	private static $cookie = '/tmp/cookie.txt';
 
@@ -61,34 +27,6 @@ class Coursera{
 
 	public function login(){
 
-		/*//$loginPageUrl = self::URL_PREFIX . '/?authMode=login';
-		$loginPageUrl = 'https://www.coursera.org/?authMode=login';
-		//$loginPageHtml = file_get_contents($loginPageUrl);
-		$formCurl = new LibCurl(true, self::$cookie);
-		$loginPageHtml = $formCurl->get($loginPageUrl);
-		//$curl = new LibCurl(true, self::$cookie);
-		//$loginPageHtml = $curl->get($loginPageUrl);
-
-
-		//获取登录地址串
-		$action = '';
-		$matchStr = '#<form action="([^"]*)" method="post"#';
-		preg_match($matchStr, $loginPageHtml,$actionM);
-		if (is_array($actionM) && !empty($actionM[1])) {
-			$action = trim($actionM[1]);
-		}
-		if (empty($action)) {
-			$this->error('登录失败');
-		}
-
-		echo $loginCheckPage = self::URL_PREFIX . $action;
-		echo $params = sprintf('email=%s&password=%s', self::$userName, self::$password);
-		$curl = new LibCurl(true, self::$cookie);
-		echo $ret = $curl->post( $loginCheckPage , $params);
-
-		return ;*/
-
-
 		$loginPageUrl = self::URL_PREFIX . '/?authMode=login';
 		$formCurl = new LibCurl(true, self::$cookie);
 		$loginPageHtml = $formCurl->get($loginPageUrl);
@@ -100,14 +38,10 @@ class Coursera{
 		if (is_array($actionM) && !empty($actionM[1])) {
 			$action = trim($actionM[1]);
 		}
-		if (empty($action)) {
-			$this->error('登录失败');
-		}
-		//$action = trim($actionM[1]);
 		$loginCheckPage = self::URL_PREFIX . $action;
 		$params = sprintf('email=%s&password=%s', self::$userName, self::$password);
 		$loginCurl = new LibCurl(true, self::$cookie);
-		echo $loginCurl->post( $loginCheckPage , $params);//{"message":"unauthorized.csrf"}
+		$loginCurl->post( $loginCheckPage , $params);//{"message":"unauthorized.csrf"}
 
 		return true;
 
@@ -119,14 +53,34 @@ class Coursera{
 		$curl = new LibCurl(true, self::$cookie);
 		$listPageHtml = $curl->get($listPageUrl);
 
-		$pregStr = '#data\-lecture\-id="([^"]*)"\s*data\-link\-type="lecture:download\.mp4"\s*data\-placement\="top"\s*rel="tooltip"\s*title="Video \(MP4\)" >\s*<i class="icon\-download\-alt resource" ></i>\s*<div class="hidden">([^<]*)</div>#';
-		preg_match_all($pregStr, $listPageHtml,$lectureM);
-		
-		echo '<pre>';
-		print_r($lectureM);
-		echo '</pre>';
+		$data = array();
 
-		$this->lectureList = $lectureM;
+		$chapterPreg = '#<ul class="course-item-list-section-list">(.+?)</ul>#s';
+		preg_match_all($chapterPreg, $listPageHtml, $chapterMatche);
+		$chapterHtmlArr = $chapterMatche[1];
+
+		foreach ($chapterHtmlArr as $k => $chapterHtml) {
+
+			$sectionPreg = '#<div class="course-lecture-item-resource">(.+?)</a>\s+</div>#s';
+			preg_match_all($sectionPreg, $chapterHtml, $sectionMatche);
+
+			$listHtmlArr = $sectionMatche[1];
+
+			foreach ($listHtmlArr as $listHtml) {
+
+				$itemPreg = '#<a target="_new" href="([^"]+)".+?<div class="hidden">([^<]+)</div>#s';
+				preg_match_all($itemPreg, $listHtml, $itemMatche);
+
+				$title = explode(' for ', $itemMatche[2][0])[1];
+				$data[$k][$title] = $itemMatche[1];
+				
+			}
+
+		}
+
+		$this->lectureList = $data;
+
+		print_r($data);
 
 		return $this;
 	}
@@ -162,3 +116,4 @@ if (!$coursera->login()) {
 }
 
 $coursera->lists()->storage();
+

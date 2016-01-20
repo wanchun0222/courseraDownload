@@ -2,7 +2,14 @@
 
 class Storage{
 
-	public function downloadFile($appid,$src,$target){
+	/**
+	 * 根据URL下载文件到指定的文件目录
+	 *
+	 * @param  string    $src    网络文件地址
+	 * @param  string    $target 目标文件地址
+	 * @return bool
+	 */
+	public function downloadFile($src, $target){
 
 		$ret = false;
 		if ($this->isWinOs()) {
