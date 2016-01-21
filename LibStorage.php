@@ -14,13 +14,13 @@ class LibStorage{
 		$ret = false;
 		if (self::isWinOs()) {
 			if ( $content = file_get_contents($src)) {
-				$ret = file_put_contents($target,$content);
+				$ret = file_put_contents($target, $content);
 				unset($content);
 			}
 			return $ret;
 		}else{
 			$agent = '--user-agent="Mozilla/5.0 (Windows NT 6.1; rv:43.0) Gecko/20100101 Firefox/43.0"';
-			exec('wget '.$agent.' -t 2 -T 5 "'.$src.'" -O '.$target,$out,$status);
+			exec('wget '.$agent.' -t 2 -T 5 "'.$src.'" -O '.$target, $out, $status);
 			return file_exists($target) && filesize($target);
 		}
 	}
@@ -34,7 +34,7 @@ class LibStorage{
 	public static function mkdirs($path){
 
 		if(!file_exists( $path )){
-			//mkdir($path, 0777, true);
+			//mkdir($path, 0777, true); //权限上有点问题
 			self::mkdirs(dirname($path));
 			mkdir($path, 0777);
 			chmod($path, 0777); 
