@@ -1,6 +1,6 @@
 <?php
 
-class Storage{
+class LibStorage{
 
 	/**
 	 * 根据URL下载文件到指定的文件目录
@@ -9,10 +9,10 @@ class Storage{
 	 * @param  string    $target 目标文件地址
 	 * @return bool
 	 */
-	public function downloadFile($src, $target){
+	public static function downloadFile($src, $target){
 
 		$ret = false;
-		if ($this->isWinOs()) {
+		if (self::isWinOs()) {
 			if ( $content = file_get_contents($src)) {
 				$ret = file_put_contents($target,$content);
 				unset($content);
@@ -31,11 +31,11 @@ class Storage{
 	 * @param  string    $path
 	 * @return void
 	 */
-	protected function mkdirs($path){
+	public static function mkdirs($path){
 
 		if(!file_exists( $path )){
 			//mkdir($path, 0777, true);
-			$this->mkdirs(dirname($path));
+			self::mkdirs(dirname($path));
 			mkdir($path, 0777);
 			chmod($path, 0777); 
 		}
@@ -47,7 +47,7 @@ class Storage{
 	 * @param  void
 	 * @return bool
 	 */
-	public function isWinOs(){
+	public static function isWinOs(){
 		return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
 	}
 

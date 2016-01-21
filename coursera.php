@@ -19,10 +19,17 @@ class Coursera{
 
 	private $lecturePage = '';
 
+	private $lectureDir = '';
+
 	private $lectureList = [];
 
-	function __construct($lecPage = ''){
+	private $preDownloaded = [];
+
+	private $curDownloaded = [];
+
+	function __construct($lecPage = '', $lecDir = ''){
 		$this->lecturePage = $lecPage;
+		$this->lectureDir = $lecDir;
 	}
 
 	public function login(){
@@ -47,13 +54,13 @@ class Coursera{
 
 	}
 
-	public function lists(){
+	public function getList(){
 
 		$listPageUrl = self::LIST_PREFIX . $this->lecturePage;
 		$curl = new LibCurl(true, self::$cookie);
 		$listPageHtml = $curl->get($listPageUrl);
 
-		$data = array();
+		$data = [];
 
 		$chapterPreg = '#<ul class="course-item-list-section-list">(.+?)</ul>#s';
 		preg_match_all($chapterPreg, $listPageHtml, $chapterMatche);
@@ -80,40 +87,116 @@ class Coursera{
 
 		$this->lectureList = $data;
 
+		echo "<pre>";
 		print_r($data);
 
 		return $this;
 	}
 
-	public function storage(){
+	public function storageFile(){
 
 		if (!is_array($this->lectureList)) {
 			$this->error('列表为空');
 		}
 
-		foreach ($this->lectureList as $k => $v) {
-			# code...
+		$this->_loadPreDownloaded();
+
+		foreach ($this->lectureList as $chapterKey => $chapterList) {
+
+			$chapterDir = $this->_formatDir($chapterKey);
+
+			foreach ($chapterList as $sectionKey => $sectionList) {
+				
+				$sectionDir = $this->_formatDir($sectionKey);
+
+				foreach ($sectionList as $item) {
+
+					$fileHash = md5($item);
+					if (in_array($fileHash, $this->preDownloaded)) {
+						continue;
+					}
+
+					$fileName = $this->_formatFileName($item);
+
+					$dir = $this->lectureDir . '/' . $chapterDir . '/' . $sectionDir . '/';
+
+					LibStorage::mkdirs($dir);
+
+					if (LibStorage::downloadFile($item, $dir . $fileName)) {
+						$this->curDownloaded[] = $fileHash;
+					}
+				}
+
+			}
+
 		}
 
+		return $this;
+
+	}
+
+	public function saveProgress(){
+
+		if (!$this->curDownloaded) {
+			return false;
+		}
+
+		$fileData = '<?php return '. var_export($this->curDownloaded,true).';';
+		$progressFile = $this->lecDir.'/progress.php';
+		return file_put_contents($progressFile,$fileData , LOCK_EX);
 	}
 
 	public function error($msg = ''){
 		die($msg);
 	}
 
-	private function _progress(){
-		
+	private function _loadPreDownloaded(){
+		$progressFile = $this->lecDir.'/progress.php';
+		LibStorage::mkdirs($this->lecDir);
+		if(file_exists($progressFile)){
+			$this->preDownloaded = require_once($progressFile);
+		}
 	}
+
+	private function _formatDir($dir){
+		return str_replace([':','|','?','<','>','-'], ['：','_','','(',')','_'], $dir);
+	}
+
+	private function _formatFileName($item){
+
+		$fileName = array_pop(explode('/', $item));
+
+		$section = explode('?', $fileName);
+		if (count($section) <= 1) {
+			return $fileName;
+		}else{
+
+			list($file, $query) = $section;
+
+			$param = preg_replace('#\w+=(\w+)&?#', '_\1', $query);
+
+			$pos = strrpos($file, '.');
+			if ($pos === false) {
+				return $file . $param;
+			}
+			
+			return substr($file, 0, $pos) . $param . substr($file, $pos);
+
+		}
+
+	}
+
 
 }
 
 $lecPage = '/pkujava-001/lecture';
+$lecDir  = '/tmp/lec';
 
-$coursera = new Coursera($lecPage);
+$coursera = new Coursera($lecPage, $lecDir);
 
 if (!$coursera->login()) {
 	die('login failed');
 }
 
-$coursera->lists()->storage();
+$coursera->getList()->storageFile()->saveProgress();
 
