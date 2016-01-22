@@ -12,7 +12,7 @@ class LibCurl{
 		$this->headers[] = 'Accept: image/gif, image/x-bitmap, image/jpeg, image/pjpeg';
 		$this->headers[] = 'Connection: Keep-Alive';
 		$this->headers[] = 'Content-type: application/x-www-form-urlencoded;charset=UTF-8';
-		$this->user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:43.0) Gecko/20100101 Firefox/43.0"';
+		$this->user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:43.0) Gecko/20100101 Firefox/43.0';
 		$this->compression = $compression;
 		$this->proxy = $proxy;
 		$this->cookies = $cookies;

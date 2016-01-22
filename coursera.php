@@ -1,6 +1,7 @@
 <?php
 
 set_time_limit(0);
+ini_set('memory_limit', '128M');
 
 require('./LibCurl.php');
 require('./LibStorage.php');
@@ -21,11 +22,11 @@ class Coursera{
 
 	private $lectureDir = '';
 
-	private $lectureList = [];
+	private $lectureList = array();
 
-	private $preDownloaded = [];
+	private $preDownloaded = array();
 
-	private $curDownloaded = [];
+	private $curDownloaded = array();
 
 	function __construct($lecPage = '', $lecDir = ''){
 		$this->lecturePage = $lecPage;
@@ -60,7 +61,7 @@ class Coursera{
 		$curl = new LibCurl(true, self::$cookie);
 		$listPageHtml = $curl->get($listPageUrl);
 
-		$data = [];
+		$data = array();
 
 		$chapterPreg = '#<ul class="course-item-list-section-list">(.+?)</ul>#s';
 		preg_match_all($chapterPreg, $listPageHtml, $chapterMatche);
@@ -78,17 +79,20 @@ class Coursera{
 				$itemPreg = '#<a target="_new" href="([^"]+)".+?<div class="hidden">([^<]+)</div>#s';
 				preg_match_all($itemPreg, $listHtml, $itemMatche);
 
-				$title = explode(' for ', $itemMatche[2][0])[1];
+				$titleArr = explode(' for ', $itemMatche[2][0]);
+				$title = $titleArr[1];
 				$data[$k][$title] = $itemMatche[1];
+
+				echo "<pre>";
+				print_r($data);
+
+				$this->lectureList = $data;
+
+				return $this;
 				
 			}
 
 		}
-
-		$this->lectureList = $data;
-
-		echo "<pre>";
-		print_r($data);
 
 		return $this;
 	}
@@ -122,7 +126,7 @@ class Coursera{
 
 					LibStorage::mkdirs($dir);
 
-					if (LibStorage::downloadFile($item, $dir . $fileName)) {
+					if (LibStorage::downloadFile($item, $dir . $fileName, self::$cookie)) {
 						$this->curDownloaded[] = $fileHash;
 					}
 				}
@@ -142,7 +146,7 @@ class Coursera{
 		}
 
 		$fileData = '<?php return '. var_export($this->curDownloaded,true).';';
-		$progressFile = $this->lecDir.'/progress.php';
+		$progressFile = $this->lectureDir.'/progress.php';
 		return file_put_contents($progressFile,$fileData , LOCK_EX);
 	}
 
@@ -151,15 +155,15 @@ class Coursera{
 	}
 
 	private function _loadPreDownloaded(){
-		$progressFile = $this->lecDir.'/progress.php';
-		LibStorage::mkdirs($this->lecDir);
+		$progressFile = $this->lectureDir.'/progress.php';
+		LibStorage::mkdirs($this->lectureDir);
 		if(file_exists($progressFile)){
 			$this->preDownloaded = require_once($progressFile);
 		}
 	}
 
 	private function _formatDir($dir){
-		return str_replace([':','|','?','<','>','-'], ['：','_','','(',')','_'], $dir);
+		return str_replace(array(':','|','?','<','>','-'), array('：','_','','(',')','_'), $dir);
 	}
 
 	private function _formatFileName($item){
@@ -190,7 +194,7 @@ class Coursera{
 }
 
 $lecPage = '/pkujava-001/lecture';
-$lecDir  = '/tmp/lec';
+$lecDir  = 'D:/tmp/lec';
 
 $coursera = new Coursera($lecPage, $lecDir);
 
