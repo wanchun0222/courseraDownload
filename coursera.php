@@ -57,12 +57,10 @@ class Coursera{
 
 	public function getList(){
 
-		$listPageUrl = self::LIST_PREFIX . $this->lecturePage;
-		$curl = new LibCurl(true, self::$cookie);
-		$listPageHtml = $curl->get($listPageUrl);
-
 		$data = array();
 
+		$curl = new LibCurl(true, self::$cookie);
+		$listPageHtml = $curl->get($this->lecturePage);
 		$chapterPreg = '#<ul class="course-item-list-section-list">(.+?)</ul>#s';
 		preg_match_all($chapterPreg, $listPageHtml, $chapterMatche);
 		$chapterHtmlArr = $chapterMatche[1];
@@ -73,7 +71,6 @@ class Coursera{
 			preg_match_all($sectionPreg, $chapterHtml, $sectionMatche);
 
 			$listHtmlArr = $sectionMatche[1];
-
 			foreach ($listHtmlArr as $listHtml) {
 
 				$itemPreg = '#<a target="_new" href="([^"]+)".+?<div class="hidden">([^<]+)</div>#s';
@@ -116,7 +113,7 @@ class Coursera{
 				foreach ($sectionList as $item) {
 
 					$fileHash = md5($item);
-					if (in_array($fileHash, $this->preDownloaded)) {
+					if (in_array($fileHash, array_keys($this->preDownloaded))) {
 						continue;
 					}
 
@@ -127,7 +124,9 @@ class Coursera{
 					LibStorage::mkdirs($dir);
 
 					if (LibStorage::downloadFile($item, $dir . $fileName, self::$cookie)) {
-						$this->curDownloaded[] = $fileHash;
+						$this->curDownloaded[$fileHash] = $dir . $fileName;
+
+						echo 'file('.$dir . $fileName .')download complete downloaded '.PHP_EOL;
 					}
 				}
 
@@ -163,12 +162,16 @@ class Coursera{
 	}
 
 	private function _formatDir($dir){
+		$dir = urldecode($dir);
 		return str_replace(array(':','|','?','<','>','-'), array('：','_','','(',')','_'), $dir);
 	}
 
 	private function _formatFileName($item){
 
-		$fileName = array_pop(explode('/', $item));
+		$item = urldecode($item);
+
+		$itemArr = explode('/', $item);
+		$fileName = array_pop($itemArr);
 
 		$section = explode('?', $fileName);
 		if (count($section) <= 1) {
@@ -193,7 +196,7 @@ class Coursera{
 
 }
 
-$lecPage = '/pkujava-001/lecture';
+$lecPage = 'https://class.coursera.org/os-001/lecture';
 $lecDir  = 'D:/tmp/lec';
 
 $coursera = new Coursera($lecPage, $lecDir);

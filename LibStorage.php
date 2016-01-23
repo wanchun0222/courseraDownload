@@ -20,6 +20,10 @@ class LibStorage{
 				self::$streamContext = self::createStreamContext($cookie);
 			}
 
+			if (self::$streamContext === false) {
+				return $ret;
+			}
+
 			if ( $content = file_get_contents($src, false, self::$streamContext)) {
 				$ret = file_put_contents($target, $content);
 				unset($content);
@@ -74,6 +78,10 @@ class LibStorage{
 				$key = array_pop($cookieSection);
 				$cookieStr .= $key.'='.$val.';';
 			}
+		}
+
+		if (empty($cookieStr)) {
+			return false;
 		}
 
 		$opts =  array (
