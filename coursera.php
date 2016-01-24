@@ -181,7 +181,6 @@ class Coursera{
 			list($file, $query) = $section;
 
 			$param = preg_replace('#\w+=(\w+)&?#', '_\1', $query);
-
 			$pos = strrpos($file, '.');
 			if ($pos === false) {
 				return $file . $param;
@@ -206,4 +205,9 @@ if (!$coursera->login()) {
 }
 
 $coursera->getList()->storageFile()->saveProgress();
+
+//中文文件名乱码问题
+//特殊字符的目录生成问题
+//想着参数的传递接收
+//登录接口的稳定性
 
