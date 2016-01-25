@@ -25,6 +25,8 @@ class LibStorage{
 			}
 
 			if ( $content = file_get_contents($src, false, self::$streamContext)) {
+				
+				$target = iconv('utf-8', 'gbk', $target);
 				$ret = file_put_contents($target, $content);
 				unset($content);
 			}
@@ -45,10 +47,15 @@ class LibStorage{
 	 */
 	public static function mkdirs($path){
 
+		if (self::isWinOs()) {
+			$path = iconv('utf-8', 'gbk', $path);
+		}
+
 		if(!file_exists( $path )){
 			//mkdir($path, 0777, true); //权限上有点问题
 			self::mkdirs(dirname($path));
-			mkdir($path, 0777);
+			$dd = mkdir($path, 0777);
+			var_dump($dd);
 			chmod($path, 0777); 
 		}
 	}
@@ -63,6 +70,12 @@ class LibStorage{
 		return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
 	}
 
+	/**
+	 * 创建流上下文
+	 *
+	 * @param  string $cookie curl库生成的cookie文件
+	 * @return bool|object 
+	 */
 	public static function createStreamContext($cookie){
 
 		$cookieArr = @file($cookie, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);

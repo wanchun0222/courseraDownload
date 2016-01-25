@@ -16,11 +16,13 @@ class Coursera{
 	
 	private static $password = 'your coursera password';
 
-	private static $cookie = '/tmp/cookie.txt';
-
 	private $lecturePage = '';
 
 	private $lectureDir = '';
+
+	private $cookie = '';
+
+	private $progress = '';
 
 	private $lectureList = array();
 
@@ -30,13 +32,15 @@ class Coursera{
 
 	function __construct($lecPage = '', $lecDir = ''){
 		$this->lecturePage = $lecPage;
-		$this->lectureDir = $lecDir;
+		$this->lectureDir  = $lecDir;
+		$this->cookie      = $this->lectureDir . '/' . 'cookie.txt';
+		$this->progress    = $this->lectureDir. '/' . 'progress.php';
 	}
 
 	public function login(){
 
 		$loginPageUrl = self::URL_PREFIX . '/?authMode=login';
-		$formCurl = new LibCurl(true, self::$cookie);
+		$formCurl = new LibCurl(true, $this->cookie);
 		$loginPageHtml = $formCurl->get($loginPageUrl);
 
 		//登录
@@ -48,7 +52,7 @@ class Coursera{
 		}
 		$loginCheckPage = self::URL_PREFIX . $action;
 		$params = sprintf('email=%s&password=%s', self::$userName, self::$password);
-		$loginCurl = new LibCurl(true, self::$cookie);
+		$loginCurl = new LibCurl(true, $this->cookie);
 		$loginCurl->post( $loginCheckPage , $params);//{"message":"unauthorized.csrf"}
 
 		return true;
@@ -59,11 +63,20 @@ class Coursera{
 
 		$data = array();
 
-		$curl = new LibCurl(true, self::$cookie);
+		$curl = new LibCurl(true, $this->cookie);
 		$listPageHtml = $curl->get($this->lecturePage);
-		$chapterPreg = '#<ul class="course-item-list-section-list">(.+?)</ul>#s';
-		preg_match_all($chapterPreg, $listPageHtml, $chapterMatche);
-		$chapterHtmlArr = $chapterMatche[1];
+
+		$chapterHtmlPreg = '#<ul class="course-item-list-section-list">(.+?)</ul>#s';
+		preg_match_all($chapterHtmlPreg, $listPageHtml, $chapterHtmlMatche);
+		$chapterHtmlArr = $chapterHtmlMatche[1];
+
+		$chapterTitlePreg = '#<h3><span class="icon-chevron-(?:right|down)" style="width:18px;display:inline-block;"></span> &nbsp;([^<]+)</h3>#';
+		preg_match_all($chapterTitlePreg, $listPageHtml, $chapterTitleMatche);
+		$chapterTitleArr = $chapterTitleMatche[1];
+
+		if (count($chapterHtmlArr) != count($chapterTitleArr)) {
+			$this->error('列表获取失败');
+		}
 
 		foreach ($chapterHtmlArr as $k => $chapterHtml) {
 
@@ -78,14 +91,14 @@ class Coursera{
 
 				$titleArr = explode(' for ', $itemMatche[2][0]);
 				$title = $titleArr[1];
-				$data[$k][$title] = $itemMatche[1];
+				$data[$chapterTitleArr[$k]][$title] = $itemMatche[1];
 
 				echo "<pre>";
 				print_r($data);
 
 				$this->lectureList = $data;
 
-				return $this;
+				return $this;//todo
 				
 			}
 
@@ -120,10 +133,9 @@ class Coursera{
 					$fileName = $this->_formatFileName($item);
 
 					$dir = $this->lectureDir . '/' . $chapterDir . '/' . $sectionDir . '/';
-
 					LibStorage::mkdirs($dir);
 
-					if (LibStorage::downloadFile($item, $dir . $fileName, self::$cookie)) {
+					if (LibStorage::downloadFile($item, $dir . $fileName, $this->cookie)) {
 						$this->curDownloaded[$fileHash] = $dir . $fileName;
 
 						echo 'file('.$dir . $fileName .')download complete downloaded '.PHP_EOL;
@@ -145,8 +157,7 @@ class Coursera{
 		}
 
 		$fileData = '<?php return '. var_export($this->curDownloaded,true).';';
-		$progressFile = $this->lectureDir.'/progress.php';
-		return file_put_contents($progressFile,$fileData , LOCK_EX);
+		return file_put_contents($this->progress,$fileData, LOCK_EX);
 	}
 
 	public function error($msg = ''){
@@ -154,16 +165,14 @@ class Coursera{
 	}
 
 	private function _loadPreDownloaded(){
-		$progressFile = $this->lectureDir.'/progress.php';
-		LibStorage::mkdirs($this->lectureDir);
-		if(file_exists($progressFile)){
-			$this->preDownloaded = require_once($progressFile);
+		if(file_exists($this->progress)){
+			$this->preDownloaded = require_once($this->progress);
 		}
 	}
 
 	private function _formatDir($dir){
 		$dir = urldecode($dir);
-		return str_replace(array(':','|','?','<','>','-'), array('：','_','','(',')','_'), $dir);
+		return str_replace(array(':','|','？','?','<','>','-',' '), array('_','_','','','(',')','_',''), $dir);
 	}
 
 	private function _formatFileName($item){
@@ -185,13 +194,9 @@ class Coursera{
 			if ($pos === false) {
 				return $file . $param;
 			}
-			
 			return substr($file, 0, $pos) . $param . substr($file, $pos);
-
 		}
-
 	}
-
 
 }
 
@@ -205,9 +210,3 @@ if (!$coursera->login()) {
 }
 
 $coursera->getList()->storageFile()->saveProgress();
-
-//中文文件名乱码问题
-//特殊字符的目录生成问题
-//想着参数的传递接收
-//登录接口的稳定性
-
