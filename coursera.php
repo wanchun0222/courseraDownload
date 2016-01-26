@@ -200,11 +200,16 @@ class Coursera{
 
 }
 
-$lecPage = 'https://class.coursera.org/os-001/lecture';
-$lecDir  = 'D:/tmp/lec';
+list($file, $lecPage, $lecDir) = $argv;
+
+if (empty($lecPage) || empty($lecDir)) {
+	die('请传入2个参数：参数1为课程视频(Video Lectures)页面的URL,参数2为下载视频所保存路径(绝对路径)');
+}
+
+//$lecPage = 'https://class.coursera.org/os-001/lecture';
+//$lecDir  = 'D:/tmp/lec';
 
 $coursera = new Coursera($lecPage, $lecDir);
-
 if (!$coursera->login()) {
 	die('login failed');
 }
