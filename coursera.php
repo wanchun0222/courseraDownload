@@ -12,9 +12,9 @@ class Coursera{
 
 	const LIST_PREFIX = 'https://class.coursera.org';
 
-	private static $userName = 'your coursera user name(email)';
+	const USER_NAME = 'your coursera user name(email)';
 	
-	private static $password = 'your coursera password';
+	const PASSWORD = 'your coursera password';
 
 	private $lecturePage = '';
 
@@ -51,7 +51,7 @@ class Coursera{
 			$action = trim($actionM[1]);
 		}
 		$loginCheckPage = self::URL_PREFIX . $action;
-		$params = sprintf('email=%s&password=%s', self::$userName, self::$password);
+		$params = sprintf('email=%s&password=%s', self::USER_NAME, self::PASSWORD);
 		$loginCurl = new LibCurl(true, $this->cookie);
 		$loginCurl->post( $loginCheckPage , $params);//{"message":"unauthorized.csrf"}
 
@@ -93,13 +93,7 @@ class Coursera{
 				$title = $titleArr[1];
 				$data[$chapterTitleArr[$k]][$title] = $itemMatche[1];
 
-				echo "<pre>";
-				print_r($data);
-
 				$this->lectureList = $data;
-
-				return $this;//todo
-				
 			}
 
 		}
@@ -210,8 +204,4 @@ if (empty($lecPage) || empty($lecDir)) {
 //$lecDir  = 'D:/tmp/lec';
 
 $coursera = new Coursera($lecPage, $lecDir);
-if (!$coursera->login()) {
-	die('login failed');
-}
-
 $coursera->getList()->storageFile()->saveProgress();
