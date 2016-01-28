@@ -34,7 +34,7 @@ class LibStorage{
 		}else{
 			$agent = '--user-agent="Mozilla/5.0 (Windows NT 6.1; rv:43.0) Gecko/20100101 Firefox/43.0"';
 			$cookieParam = '--load-cookies='.$cookie;
-			exec('wget '.$agent.' '.$cookieParam.' -t 2 -T 5 "'.$src.'" -O '.$target, $out, $status);
+			exec('wget '.$agent.' '.$cookieParam.' -t 2 -T 5 "'.$src.'" -O "'.$target.'"', $out, $status);
 			return file_exists($target) && filesize($target);
 		}
 	}

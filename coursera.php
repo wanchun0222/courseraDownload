@@ -28,8 +28,6 @@ class Coursera{
 
 	private $preDownloaded = array();
 
-	private $curDownloaded = array();
-
 	function __construct($lecPage = '', $lecDir = ''){
 		$this->lecturePage = $lecPage;
 		$this->lectureDir  = $lecDir;
@@ -53,9 +51,9 @@ class Coursera{
 		$loginCheckPage = self::URL_PREFIX . $action;
 		$params = sprintf('email=%s&password=%s', self::USER_NAME, self::PASSWORD);
 		$loginCurl = new LibCurl(true, $this->cookie);
-		$loginCurl->post( $loginCheckPage , $params);//{"message":"unauthorized.csrf"}
+		$loginCurl->post($loginCheckPage , $params);//{"message":"unauthorized.csrf"}
 
-		return true;
+		return $this;
 
 	}
 
@@ -74,7 +72,7 @@ class Coursera{
 		preg_match_all($chapterTitlePreg, $listPageHtml, $chapterTitleMatche);
 		$chapterTitleArr = $chapterTitleMatche[1];
 
-		if (count($chapterHtmlArr) != count($chapterTitleArr)) {
+		if (empty($chapterHtmlArr) || count($chapterHtmlArr) != count($chapterTitleArr)) {
 			$this->error('列表获取失败');
 		}
 
@@ -130,8 +128,7 @@ class Coursera{
 					LibStorage::mkdirs($dir);
 
 					if (LibStorage::downloadFile($item, $dir . $fileName, $this->cookie)) {
-						$this->curDownloaded[$fileHash] = $dir . $fileName;
-
+						$this->_saveProgress($fileHash."\t".$dir . $fileName);
 						echo 'file('.$dir . $fileName .')download complete downloaded '.PHP_EOL;
 					}
 				}
@@ -144,14 +141,12 @@ class Coursera{
 
 	}
 
-	public function saveProgress(){
+	private function _saveProgress($line){
 
-		if (!$this->curDownloaded) {
+		if (empty($line)) {
 			return false;
 		}
-
-		$fileData = '<?php return '. var_export($this->curDownloaded,true).';';
-		return file_put_contents($this->progress,$fileData, LOCK_EX);
+		return file_put_contents($this->progress,$line, FILE_APPEND | LOCK_EX);
 	}
 
 	public function error($msg = ''){
@@ -160,13 +155,23 @@ class Coursera{
 
 	private function _loadPreDownloaded(){
 		if(file_exists($this->progress)){
-			$this->preDownloaded = require_once($this->progress);
+			$progressArr = @file($this->progress, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+			if (!is_array($progressArr)) {
+				return false;
+			}
+
+			foreach ($progressArr as $item) {
+				list($fileHash, $file) = explode("\t", $item);
+				$this->preDownloaded[$fileHash] = $file;
+			}
 		}
 	}
 
 	private function _formatDir($dir){
 		$dir = urldecode($dir);
-		return str_replace(array(':','|','？','?','<','>','-',' '), array('_','_','','','(',')','_',''), $dir);
+		$search = array(':','|','？','?','<','>','(',')','-',' ');
+		$replace = array('_','_','','','（','）','（','）','_','');
+		return str_replace($search, $replace, $dir);
 	}
 
 	private function _formatFileName($item){
@@ -204,4 +209,5 @@ if (empty($lecPage) || empty($lecDir)) {
 //$lecDir  = 'D:/tmp/lec';
 
 $coursera = new Coursera($lecPage, $lecDir);
-$coursera->getList()->storageFile()->saveProgress();
+$coursera->login()->getList()->storageFile();
+
