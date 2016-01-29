@@ -89,7 +89,7 @@ class LibStorage{
 			if (count($cookieSection) == 7) {
 				$val = array_pop($cookieSection);
 				$key = array_pop($cookieSection);
-				$cookieStr .= $key.'='.$val.';';
+				$cookieStr .= sprintf('%s=%s;',$key,$val);
 			}
 		}
 

@@ -67,10 +67,16 @@ class Coursera{
 		$chapterHtmlPreg = '#<ul class="course-item-list-section-list">(.+?)</ul>#s';
 		preg_match_all($chapterHtmlPreg, $listPageHtml, $chapterHtmlMatche);
 		$chapterHtmlArr = $chapterHtmlMatche[1];
+		if (!is_array($chapterHtmlArr)) {
+			$this->error('列表获取失败');
+		}
 
 		$chapterTitlePreg = '#<h3><span class="icon-chevron-(?:right|down)" style="width:18px;display:inline-block;"></span> &nbsp;([^<]+)</h3>#';
 		preg_match_all($chapterTitlePreg, $listPageHtml, $chapterTitleMatche);
 		$chapterTitleArr = $chapterTitleMatche[1];
+		if (!is_array($chapterTitleArr)) {
+			$this->error('列表获取失败');
+		}
 
 		if (empty($chapterHtmlArr) || count($chapterHtmlArr) != count($chapterTitleArr)) {
 			$this->error('列表获取失败');
@@ -82,6 +88,9 @@ class Coursera{
 			preg_match_all($sectionPreg, $chapterHtml, $sectionMatche);
 
 			$listHtmlArr = $sectionMatche[1];
+			if (!is_array($listHtmlArr)) {
+				continue;
+			}
 			foreach ($listHtmlArr as $listHtml) {
 
 				$itemPreg = '#<a target="_new" href="([^"]+)".+?<div class="hidden">([^<]+)</div>#s';
@@ -128,8 +137,8 @@ class Coursera{
 					LibStorage::mkdirs($dir);
 
 					if (LibStorage::downloadFile($item, $dir . $fileName, $this->cookie)) {
-						$this->_saveProgress($fileHash."\t".$dir . $fileName);
-						echo 'file('.$dir . $fileName .')download complete downloaded '.PHP_EOL;
+						$this->_saveProgress($fileHash."\t".$dir . $fileName.PHP_EOL);
+						echo '==>file('.$dir . $fileName .') DONE'.PHP_EOL;
 					}
 				}
 
