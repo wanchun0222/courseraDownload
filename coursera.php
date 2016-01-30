@@ -53,6 +53,8 @@ class Coursera{
 		$loginCurl = new LibCurl(true, $this->cookie);
 		$loginCurl->post($loginCheckPage , $params);//{"message":"unauthorized.csrf"}
 
+		$this->_reviseCookieFile();
+
 		return $this;
 
 	}
@@ -150,16 +152,16 @@ class Coursera{
 
 	}
 
+	public function error($msg = ''){
+		die($msg);
+	}
+
 	private function _saveProgress($line){
 
 		if (empty($line)) {
 			return false;
 		}
 		return file_put_contents($this->progress,$line, FILE_APPEND | LOCK_EX);
-	}
-
-	public function error($msg = ''){
-		die($msg);
 	}
 
 	private function _loadPreDownloaded(){
@@ -203,6 +205,13 @@ class Coursera{
 				return $file . $param;
 			}
 			return substr($file, 0, $pos) . $param . substr($file, $pos);
+		}
+	}
+
+	private function _reviseCookieFile(){
+		if(file_exists($this->cookie)){
+			$rightCookie = str_replace('#HttpOnly_','',file_get_contents($this->cookie));
+			file_put_contents($this->cookie, $rightCookie);
 		}
 	}
 
